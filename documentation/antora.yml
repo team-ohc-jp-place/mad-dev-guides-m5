@@ -1,6 +1,6 @@
 name: mad-dev-guides-m5
 title: Module 5 - Extend app using event-driven architecture
-version: main
+version: main-jp
 nav:
   - modules/ROOT/nav.adoc
 start_page: ROOT:introduction.adoc
