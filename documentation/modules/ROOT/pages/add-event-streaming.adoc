@@ -7,7 +7,7 @@
 
 To support the business requirement of capturing and processing user activity on the Globex Coolstuff application, two new services have been developed:
 
-* *Activity Tracking service*: This service exposes a REST endpoint. User activities on the Globex website (such as opening a product page, liking a product etc..) generates an activity payload which is sent to the Activity Tracking REST endpoint. The service transforms this payload into a Kafka message which is sent to a topic on the Kafka broker.
+* *Activity Tracking service*: This service exposes a REST endpoint. User activities on the Globex website (such as opening a product page, liking a product etc.) generates an activity payload which is sent to the Activity Tracking REST endpoint. The service transforms this payload into a Kafka message which is sent to a topic on the Kafka broker.
 * *Recommendation Engine*: This service consumes and processes the events produced by the Activity Tracking service. The service uses the Kafka Streams library to continuously determine the top featured products (the products which generate the most activities).
 The service also exposes a REST endpoint to expose the list of featured products.
 
@@ -16,9 +16,9 @@ Both services are developed using Quarkus, the Quarkus extensions for reactive m
 [#event-goals]
 == Goals of this lab
 
-In this part of the workshop you will connect the Activity Tracking and Recommendation Engine applications to the OpenShift Streams for Apache Kafka instance using link:https://docs.openshift.com/container-platform/4.10/applications/connecting_applications_to_services/understanding-service-binding-operator.html[Service Binding,role=external,window=_blank].
+In this part of the workshop you will connect the Activity Tracking and Recommendation Engine applications to the Apache Kafka broker using link:https://docs.openshift.com/container-platform/latest/applications/connecting_applications_to_services/understanding-service-binding-operator.html[Service Binding,role=external,window=_blank].
 
-You will be using the Red Hat Hybrid Cloud Console and the OpenShift Developer Console to setup and configure the Streams for Apache Kafka instance as well as the service binding. Note that these steps can also be achieved using the Red Hat OpenShift Application Services (`rhoas`) CLI. 
+You will be using the OpenShift Developer Console to configure the service binding. Note that these steps can also be achieved using the Red Hat OpenShift (`oc`) CLI.
 
 Note:  <<appendix.adoc#service-binding, Click to learn more about Service Binding>>
 
@@ -34,15 +34,17 @@ image::globex-deployment-topology.png[]
 The deployed topology consists of:
 +
 ** `globex-ui`: The Globex Coolstuff web application (Node.js/Angular). 
-** `catalog-app`: The Globex Coolstuff catalog service, consisting of the catalog database and the Spring Boot catalog microservice.
-** `inventory-app`: The Globex Coolstuff inventory service, consisting of the inventory database and the Quarkus inventory microservice.
+** `catalog` and `catalog-database`: The Globex Coolstuff catalog service, consisting of the catalog database and the Spring Boot catalog microservice.
+** `inventory` and `inventory-database`: The Globex Coolstuff inventory service, consisting of the inventory database and the Quarkus inventory microservice.
 ** `activity-tracking`: The Activity Tracking service. Notice that the deployment of the service is scaled to zero. The service will be scaled up once the connection to the Kafka broker is set up.
 **  `recommendation-engine`: The Recommendation Engine service. Notice that the deployment of the service is scaled to zero. The service will be scaled up once the connection to the Kafka broker is set up.
-** `order-placement-service`: The Order Placement service, which receives orders from the web application through REST and sends the orders to a Kafka topic. Notice that the deployment of the service is scaled to zero. The service will be scaled up once the connection to the Kafka broker is set up.
 ** `activity-tracking-simulator`: A Quarkus service that simulates user activity events and sends them to the Activity Tracking service.
-. Open the *Globex UI* application in a browser tab. To do so, click on the image:console-open-url.png[Open URL, 30, 30] icon next to the blue circle representing the *Globex UI* deployment. 
+** `kafka`: an instance of a Kafka broker, managed by the _AMQ Streams_ operator. In the Topology view, the kafka deployment shows up as a single unit, but in reality it consists of several deployments: a ZooKeeper (3 nodes) to manage and maintain the internal state of the Kafka broker, the Kafka broker itself (2 broker nodes) and the Entity operator, which manages topics and users.
+** `kafdrop`: a web UI for viewing Kafka topics and browsing consumer groups. The tool displays information such as brokers, topics, partitions, consumers, and lets you view messages.
+
+. Open the *Globex UI* application in a browser tab. To do so, click on the image:console-open-url.png[Open URL, 30, 30] icon next to the blue circle representing the *globex-ui* deployment in the Topology view. 
 +
-Alternatively. open a browser  tab and navigate to link:https://globex-ui-globex-%USERID%.%SUBDOMAIN%/[globex-ui^, role=external,window=_blank]
+Alternatively, open a browser tab and navigate to link:https://globex-ui-globex-%USERID%.%SUBDOMAIN%/[globex-ui^, role=external,window=_blank]
 +
 Expect to see the home page of the Globex Coolstuff web application:
 +
@@ -52,138 +54,139 @@ image::globex-coolstuff-home-page.png[]
 image::globex-coolstuff-product-page.png[]
 . The _Featured_ pane on the home page is empty at the moment. Also the product list page has an empty bar above the product list. These elements will be populated once the recommendation engine is up and running. 
 
-=== Create a Kafka Topic in OpenShift Streams for Apache Kafka
+=== Create a Kafka Topic in the AMQ Streams Kafka broker
 
-. On the https://console.redhat.com[console.redhat.com,role=external,window=redhatconsole] landing page, select *Application and Data Services* from the menu on the left. On the Application Services landing page, select *Streams for Apache Kafka → Kafka Instances*.
+The first thing to do is to create a topic in the Kafka broker which will receive the user activity events generated on the Globex web site.
 
-. In the *Kafka Instances* page of the web console, click the name of the Kafka instance (`globex`) that you want to add a topic to.
+When using AMQ Streams, topics can be created by deploying a Kubernetes Custom Resource (CR), that will be processed by the Entity Operator of AMQ Streams, which will use the Kafka APIs to create the topic on the broker.
 
-. Select the *Topics* tab, click *Create topic*, and follow the guided steps to define the topic details. Click *Next* to complete each step and click *Finish* to complete the setup.
-+
-image::rhosak-create-topic.png[]
-[#kafka-params]#&nbsp;# 
-+
-* *Topic name*: Enter `globex.tracking`.
-* *Partitions*: Keep the default value at `1`. 
-* *Message retention*: Keep default values. [ *Retention time*: `A week` and *Retention Size*: `Unlimited`. ]
-* *Replicas*: Keep default values
-+
-Note: <<appendix.adoc#kafka-params, Click to learn more about the Kafka instance parameters>>
+A custom resource can be created directly in the OpenShift console.
 
-. After you complete the topic setup, the new Kafka topic is listed in the topics table. You can now start producing and consuming messages to and from this topic using services that are connected to this Kafka instance.
+. On the OpenShift console, click on the image:console-import-yaml.png[] icon in the top menu on the right. This opens an editor where you can enter a Kubernetes resource definition in YAML or JSON format.
+
+. Paste the following *KafkaTopic* Custom Resource in the editor.
 +
-image::rhosak-topic-created.png[]
+[.console-input]
+[source,yaml]
+----
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  labels:
+    strimzi.io/cluster: kafka
+  name: globex.tracking
+  namespace: globex-%USERID%
+spec:
+  topicName: globex.tracking
+  partitions: 1
+  replicas: 2
+  config: {}
+----
++
+Click *Create* to create the topic.
++
+This creates a topic named *globex.tracking* with a single partition and two replicas, and default configuration (the *config* element allows you to define additional properties like message retention time and size etc...).
+
+. The Kafdrop UI can be used to verify that the topic has been correctly created. In the Topology view of the *globex-%USERID%* namespace, click on the image:console-open-url.png[Open URL, 30, 30] icon next to the blue circle representing the *kafdrop* deployment.
++
+Alternatively, open a browser tab and navigate to link:https://kafdrop-globex-%USERID%.%SUBDOMAIN%/[kafdrop^, role=external,window=_blank].
+
+. This redirects you to the Kafdrop home page. Scroll down to see the list of topics. Expect to see the *globex.tracking* topics, which you just created.
++
+image::kafdrop-landing-page.png[]
++
+Click on the topic name to see the details of the topic. Notice that the topic has a single partition, and is empty at the moment.
++
+image::kafdrop-topic.png[]
 
 
-=== Binding applications to Streams for Apache Kafka
+=== Binding applications to Apache Kafka
 
-Binding applications to services using Service Binding requires the Service Binding operator to be installed on the OpenShift cluster. To bind more specifically to a OpenShift Streams for Apache Kafka instance, the Red Hat OpenShift Application Services (RHOAS) operator is required. Both operators have been installed on your OpenShift cluster.
+In order for applications to be able to connect to a Kafka broker, the application needs to be configured with connection details like the Kafka bootstrap server URL, the security protocol and the user credentials. This is where link:https://docs.openshift.com/container-platform/4.10/applications/connecting_applications_to_services/understanding-service-binding-operator.html[Service Binding,role=external,window=_blank] comes in. Service Binding allows to inject connection details from an e.g. secret directly into a pod. 
 
-==== [underline]#*Connect OpenShift Streams for Apache Kafka*#
+Binding applications to services using Service Binding requires the Service Binding operator to be installed on the OpenShift cluster. The operator has been installed on your OpenShift cluster.
 
-In this part of the workshop you connect your OpenShift instance to the Streams for Kafka instance you created previously. This can be done from the Developer perspective on the OpenShift console, or using the `rhoas` CLI. In this workshop you use the OpenShift console.
+. As part of the provisioning of the Kafka broker, a secret *kafka-client-secret* was created in the *globex-%USERID%* namespace. To view the contents of the secret, click on *Secrets* in the left menu of the Developer perspective. Make sure you are pointing to the *globex-%USERID%* namespace.
 
-. In a browser window, navigate to the console of your OpenShift cluster at link:https://console-openshift-console.%SUBDOMAIN%/topology/ns/globex-%USERID%?view=graph[OpenShift Console^,role=external,window=openshiftconsole]. Ensure you are in the *Developer* perspective in the *globex-%USERID%* namespace.
-. In the Developer perspective, navigate to the *+Add* view. Locate the *Developer Catalog* card with the *Managed Services* entry
+. In the list of secrets, locate the *kafka-client-secret* secret, and click on the name of the secret to open the secret details. Click on *Reveal values* to see the actual values stored in the secret.
 +
-image::openshift-console-developer-catalog.png[]
-. Click the *Managed Services* link. This opens the Managed Services page, which has a card for *Red Hat OpenShift Application Services*.
-+
-image::openshift-console-application-services.png[]
-. In order to discover the managed services you are entitled to, you need to unlock the functionality with a token obtained from link:https://console.redhat.com[console.redhat.com,role=external,window=redhatconsole]. +
-Open a new browser tab and navigate to link:https://console.redhat.com/openshift/token[console.redhat.com/openshift/token,role=external,window=_blank_]. You should already be logged in, but if not, login with the Red Hat account ID you created or used earlier in the workshop. +
-Click on *Load token* in the *Connect with offline token* box. Copy the generated API token.
-. Go back to the browser tab with the OpenShift console, and click the *Red Hat OpenShift Application Services* card. This opens a popup window.  Paste the API token value in the *API Token* field.
-+
-image::openshift-console-application-services-popup.png[]
-+
-Click *Connect*. 
-+
-[NOTE]
-====
-After clicking *Connect*, the connect button turns grey, but the *Red Hat OpenShift Application Services* window stays open until the discovery of the available managed services is complete. This can take up to a minute. Do not close the *Red Hat OpenShift Application Services* window or refresh your browser in the meantime, as this will interrupt the process and lead to errors afterwards.
-====
-+
-Once the discovery is done, you are redirected back to the *Managed Services* page, which now shows a card for *Red Hat OpenShift Streams for Apache Kafka*.
-+
-image::openshift-console-rhosak.png[]
-. Click the *Red Hat OpenShift Streams for Apache Kafka* card, and click *Connect*. This opens a page which shows the Kafka instances that you can connect to. Select the `globex` instance and click *Next*
-+
-image::openshift-console-rhosak-connect.png[]
-. You are redirected to the *Topology View* of the Developer perspective, which shows now an icon for the managed Kafka instance.
-+
-image::openshift-console-topology-rhosak.png[]
-. The entry is backed by a `KafkaConnection` custom resource created by the OpenShift Application Services operator. To see the details of the KafkaConnection resource, click on the resource in the Topology view, and in the Details window, select *Edit KafkaConnection* from the *Action* drop-down box to see the YAML structure of the custom resource. +
-Notice that the YAML structure contains the bootstrap URL of the Kafka broker, as well as a reference to a secret containing the details of a service account, named `rh-cloud-services-service-account`. More specifically, look for the `status.bootstrapServerHost` and `status.serviceAccountSecretName` fields in the YAML descriptor. +
-Click *Cancel* to return to the Topology view.
+image::openshift-console-secret.png[]
 
-==== [underline]#*Set Permissions for a Service Account*#
-
-As part of connecting to the managed Kafka instance, a service account is created. This is the service account that will be used by the Activity Tracking and Recommendation Engine services to actually connect to the managed Kafka instance. To make this work, the service account needs permissions, in particular the service account needs to be able to consume from topics, produce to topics and create new topics.
-
-Setting permissions in the Access Control List of a Streams for Apache Kafka can be done in the link:https://console.redhat.com[console.redhat.com,role=external,window=redhatconsole] console, or using the `rhoas` CLI. In this workshop we use the UI on link:https://console.redhat.com[console.redhat.com,role=external,window=redhatconsole].
-
-. Navigate to the *Application and Data Services* page of the link:https://console.redhat.com[console.redhat.com,role=external,window=redhatconsole] console.
-. On the *Service Accounts* page, check that a service account was created by the OpenShift Application Services operator. Look for a service account with a name like `rhoas-operator-xxx`.
-. Navigate to the *Streams for Apache Kafka -> Kafka instances* page and open the page for your Kafka instance.
-. Click the *Access* tab to view the current ACL for this instance.
+. To bind the *Activity Tracking service* and *Recommendation Engine* applications to the Kafka broker, create a *ServiceBinding* Custom Resource.
 +
-image::rhosak-default-access.png[]
+On the OpenShift console, click on the image:console-import-yaml.png[] icon in the top menu on the right. This opens an editor where you can enter a Kubernetes resource definition in YAML or JSON format.
++
+Paste the following *ServiceBinding* Custom Resource in the editor.
++
+[.console-input]
+[source,yaml]
+----
+apiVersion: binding.operators.coreos.com/v1alpha1
+kind: ServiceBinding
+metadata:
+  name: kafka-servicebinding
+  namespace: globex-%USERID%
+spec:
+  application:
+    group: apps
+    labelSelector:
+      matchLabels:
+        service-binding/type: kafka
+    resource: deployments
+    version: v1
+  bindAsFiles: true
+  services:
+    - group: ''
+      kind: Secret
+      name: kafka-client-secret
+      version: v1
+----
++
+Click *Create* to create the Service Binding resource.
++
+The Service Binding operator detects the creation of the Custom Resource, looks for deployments which are labeled with *service-binding/type: kafka* and injects the contents of the *kafka-client-secret* into the deployments. Both the *activity-tracking* and the *recommendation-engine* deployments have the expected label.
 
-. Click *Manage access*, use the *Account* drop-down menu to select the service account that was created by the OpenShift Application Services operator, and click *Next*.
+. Once the service binding is done, the status of the ServiceBinding Custom Resource moves to *Connected*.
++
+image::openshift-console-service-binding-connected.png[]
 
-. To set the permissions for this service account, under *Assign Permissions*, click the arrow of the *Add Permission* drop-down box. This opens a window with *Task-based permission*.
+. To check the injection of the secret by the Service Binding operator, navigate to the Topology view of the OpenShift console at link:https://console-openshift-console.%SUBDOMAIN%/topology/ns/globex-%USERID%?view=graph[OpenShift Console^,role=external,window=openshiftconsole]. Click on the *activity-tracking* deployment to open the details pane, and click on the deployment name (above the Details, Resources and Observe tabs) to open the full details of the Deployment. 
 +
-image::rhosak-manage-access-add-permission.png[] 
+image::openshift-console-topology-deployment-details.png[]
 +
-Select the *Consume from a topic* and *Produce to a topic* from the *Task-based permission* possibilities. Set the topic and consumer group names to `is` and `*`.
-+
-image::rhosak-manage-access.png[]
-+
-Click *Save*.
-+
-The ACL list for the service account should look like:
-+
-image::rhosak-access-serviceaccount.png[]
-
-==== [underline]#*Bind applications to Streams for Apache Kafka*#
-
-You can now bind the Activity Tracking Service and Recommendation Engine to the OpenShift Streams for Apache instance. Through Service Binding the connection details are injected into the application pods. Service Binding to a managed Kafka instance can be done on the Topology view of OpenShift console, or through the `rhoas` CLI. In this workshop we use the OpenShift console.
-
-. In a browser window, navigate to the Topology view of your OpenShift cluster at link:https://console-openshift-console.%SUBDOMAIN%/topology/ns/globex-%USERID%?view=graph[OpenShift Console^,role=external,window=openshiftconsole]. 
-. Hover over the *activity-tracking* deployment, and grab the arrow that appears. Drag the arrow to the *KafkaConnection* icon. When reaching the KafkaConnection icon, a text box `Create Service Binding` appears. Release the arrow. Click *Create* in the *Create Service Binding* pop-up window. The Activity Tracking deployment and the KafkaConnection icon are now connected with a solid black arrow.
-+
-image::rhosak-service-binding.png[]
-. Click on the *activity-tracking* deployment to open the details window, and click on the deployment name (above the Details, Resources and Observe tabs) to open the full details of the Deployment. Scroll down to the *Volumes* section. Notice that the service binding occurs by injecting a secret into the pod:
+Scroll down to the *Volumes* section. Notice that the service binding occurs by injecting a secret into the pod:
 +
 image::service-binding-secret.png[]
 +
-Go back to the Topology view.
-. Scale the *activity-tracking* deployment to 1 replica. You can do so by clicking on the *activity-tracking* deployment, and in the details window select the *Details* tab, and click the arrow next to the circle to scale the deployment.
+Return to the Topology view.
+
+. Scale the *activity-tracking* deployment to 1 replica. You can do so by clicking on the *activity-tracking* deployment in the Topology view, and in the details window select the *Details* tab, and click the arrow next to the circle to scale the deployment.
 +
 image::openshift-console-scale-deployment.png[]
-. Check the logs of the activity-tracking pod, and notice that the pod successfully connects to the Kafka broker instance. +
+
+. Check the logs of the *activity-tracking* pod, and notice that the pod successfully connects to the Kafka broker instance. +
 To see the logs, click the *Resources* tab of the deployment, and click on the *View logs* link. +
++
+image::openshift-console-pod-logs.png[]
++
 Expect to see something like: 
 +
 ----
-exec java -Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager -XX:+ExitOnOutOfMemoryError -cp . -jar /deployments/quarkus-run.jar
-__  ____  __  _____   ___  __ ____  ______ 
- --/ __ \/ / / / _ | / _ \/ //_/ / / / __/ 
- -/ /_/ / /_/ / __ |/ , _/ ,< / /_/ /\ \   
---\___\_\____/_/ |_/_/|_/_/|_|\____/___/   
-2022-05-23 15:26:40,829 INFO  [org.apa.kaf.com.sec.aut.AbstractLogin] (main) Successfully logged in.
-2022-05-23 15:26:41,061 INFO  [io.sma.rea.mes.kafka] (main) SRMSG18258: Kafka producer kafka-producer-tracking-event, connected to Kafka brokers 'globex-ca-m-q-mtp---qgalcrg.bf2.kafka.rhcloud.com:443', is configured to write records to 'globex.tracking'
-2022-05-23 15:26:41,363 INFO  [io.quarkus] (main) activity-tracking-service 1.0.0-SNAPSHOT on JVM (powered by Quarkus 2.7.4.Final) started in 2.427s. Listening on: http://0.0.0.0:8080
-2022-05-23 15:26:41,364 INFO  [io.quarkus] (main) Profile prod activated. 
-2022-05-23 15:26:41,364 INFO  [io.quarkus] (main) Installed features: [cdi, kafka-client, resteasy-reactive, smallrye-context-propagation, smallrye-health, smallrye-reactive-messaging, smallrye-reactive-messaging-kafka, vertx]
+[...]
+2023-06-13 10:00:31,873 INFO [io.sma.rea.mes.kafka] (main) SRMSG18258: Kafka producer kafka-producer-tracking-event, connected to Kafka brokers 'kafka-kafka-bootstrap.globex-user1.svc.cluster.local:9092', is configured to write records to 'globex.tracking'
+2023-06-13 10:00:33,968 INFO [io.quarkus] (main) activity-tracking-service 1.0.0-SNAPSHOT on JVM (powered by Quarkus 2.7.4.Final) started in 13.993s. Listening on: http://0.0.0.0:8080
+2023-06-13 10:00:33,969 INFO [io.quarkus] (main) Profile prod activated.
+2023-06-13 10:00:33,969 INFO [io.quarkus] (main) Installed features: [cdi, kafka-client, resteasy-reactive, smallrye-context-propagation, smallrye-health, smallrye-reactive-messaging, smallrye-reactive-messaging-kafka, vertx]
 ----
-. Go back to the Topology view, and repeat the same steps to bind the *recommendation-engine* deployment to the OpenShift Streams for Apache instance. Once the service binding created, scale the deployment to 1 pod.
-. Once the recommendation-engine is up and running, check in the link:https://console.redhat.com[console.redhat.com,role=external,window=redhatconsole] console that a number of new topics have been created:
+
+. Go back to the Topology view, and scale up the *recommendation-engine* deployment to 1 pod.
+
+. Once the *recommendation-engine* is up and running, check in the Kafdrop UI at link:https://kafdrop-globex-%USERID%.%SUBDOMAIN%/[kafdrop^, role=external,window=_blank] that a number of new topics have been created:
 +
-image::rhosak-kafka-streams-topics.png[]
+image::kafdrop-kafka-streams-topics.png[]
 +
 Those are the topics created by the Kafka Streams topology in the Recommendation Engine to calculate the top featured products based on activity events.
+
 
 === Testing the Globex Coolstuff application
 
@@ -192,20 +195,27 @@ Now that the Activity Tracking and Recommendation Engine apps are up and running
 The deployment topology for the workshop includes an activity simulator service which will generate a number of activity events randomly distributed over a list of products. These activity events are sent to the Activity Tracking service and transformed into Kafka messages in the `globex.tracking` topic. These messages are consumed by the Recommendation Engine app to calculate the top featured products.
 
 . In a browser window, navigate to the Topology view of the lab's OpenShift cluster at link:https://console-openshift-console.%SUBDOMAIN%/topology/ns/globex-%USERID%?view=graph[OpenShift Console^,role=external,window=openshiftconsole]. 
-. Open the URL to the *activity-tracking-simulator* application by clicking the image:console-open-url.png[30,30] icon next to the blue circle representing the *activity-tracking-simulator* deployment. Navigate to the `q/swagger-ui` path of the application. 
+. Open the URL to the *activity-tracking-simulator* application by clicking the image:console-open-url.png[30,30] icon next to the blue circle representing the *activity-tracking-simulator* deployment. 
 +
-Alternatively, open a browser tab and navigate to link:https://activity-tracking-simulator-globex-%USERID%.%SUBDOMAIN%/q/swagger-ui[Activity Tracking Simulator, role=external,window=activity-tracking-simulator].
+Alternatively, open a browser tab and navigate to link:https://activity-tracking-simulator-globex-%USERID%.%SUBDOMAIN%/[Activity Tracking Simulator, role=external,window=activity-tracking-simulator].
 . This opens a Swagger UI page which allows you to use the REST API of the application. The REST application has only one operation, `POST /simulate`.
 +
 image::activity-tracking-simulator-swagger-ui.png[]
 . Generate a number of activity events. Click the *Try it out* button, and set `count` to any value between 100 and 1000. Click *Execute*.
-. OpenShift Streams for Apache Kafka has a message viewer functionality that allows you to inspect the contents of messages in a topic. +
-Navigate to the to the *Application and Data Services -> Streams for Apache Kafka -> Kafka instances* page of link:https://console.redhat.com[console.redhat.com,role=external,window=redhatconsole], select your Kafka instance and on the instance page select the *Topics* tab. Click on the `globex.tracking` topic, and select the *Messages* tab. Notice the activity event messages, with a JSON payload:
+
+. You can use the Kafdrop UI to inspect the messages sent to the *globex.tracking* topic of the Kafka broker. +
+Navigate to the Kafdrop UI at link:https://kafdrop-globex-%USERID%.%SUBDOMAIN%/[kafdrop^, role=external,window=_blank] and click on the *globex-tracking* topic in the topic list. Notice the activity event messages produced by the Activity Tracking service:
 +
-image::rhosak-messages-tracking.png[]
-. The featured product list calculated by the Recommendation Engine is produced to the `globex.recommendation-product-score-aggregated-changelog` topic. The list is recalculated roughly every 10 seconds as long as activity events are produced. Every calculation produces a message to the changelog topic. The last message in the topic represents the latest top featured list.
+image::kafdrop-topic-messages.png[]
 +
-image::rhosak-messages-aggregated-changelog.png[]
+Click on the link of the only partition of this topic to see the list of messages. Click on the image:kafdrop-expand-message.png[] icon next to a message to see its content.
++
+image::kafdrop-topic-messages-detail.png[]
+
+. The featured product list calculated by the Recommendation Engine is produced to the *globex.recommendation-product-score-aggregated-changelog* topic. The list is recalculated roughly every 10 seconds as long as activity events are produced. Every calculation produces a message to the changelog topic. The last message in the topic represents the latest top featured list.
++
+image::kafdrop-messages-aggregated-chainlog.png[]
+
 . In a browser window, navigate to the home page of the Globex Coolstuff web application. Notice that the home page now shows a list of featured products.
 +
 image::globex-coolstuff-home-page-featured.png[]
@@ -214,4 +224,4 @@ Also, the product page now shows a banner with the featured products.
 +
 image::globex-coolstuff-product-page-featured.png[]
 
-Congratulations! You reached the end of this part of the workshop, in which you added event streaming capabilities to the Globex Coolstuff application, using the OpenShift Streams for Apache Kafka managed cloud service, and Service Binding to connect your apps to the Kafka instance. 
+Congratulations! You reached the end of this part of the workshop, in which you added event streaming capabilities to the Globex Coolstuff application, using AMQ Streams, and Service Binding to connect your apps to the Kafka instance. 

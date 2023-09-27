@@ -3,7 +3,6 @@
 [#service-binding]
 == Learn more about Service Binding
 
-
 Service Binding allows you to communicate connection details and secrets to an application to allow it to bind to a service. In this context, a service can be anything: a Kafka instance, a NoSQL database, etc. By using Service Binding, we no longer need to configure connection details (host, port), authentication mechanisms (SASL, OAuth) and credentials (username/password, client id/client secret) in an application. Instead, Service Binding injects these variables into your application container (as files or environment variables) for your application to consume. The Quarkus Kubernetes Service Binding extension enables Quarkus applications to automatically pickup these variables, injected as files, from the container's filesystem, removing the need to specify any configuration settings in the application resources (e.g configuration files) themselves.
 
 https://servicebinding.io/[Read more about Service Binding For Kubernetes,role=external,window=_blank] . 
@@ -12,11 +11,10 @@ https://servicebinding.io/[Read more about Service Binding For Kubernetes,role=e
 
 
 [#kafka-params]
-== Learn more the parameters in the Kafka instance creation wizard
+== Learn more the Kafka topic configuration parameters
 
 * Partitions are distinct lists of messages within a topic and enable parts of a topic to be distributed over multiple brokers in the cluster. A topic can contain one or more partitions, enabling producer and consumer loads to be scaled.
-* Message retention time is the amount of time that messages are retained in a topic before they are deleted or compacted, depending on the cleanup policy. Retention size is the maximum total size of all log segments in a partition before they are deleted or compacted. For this workshop you can keep the default values.
 * Replicas are copies of partitions in a topic. Partition replicas are distributed over multiple brokers in the cluster to ensure topic availability if a broker fails. When a follower replica is in sync with a partition leader, the follower replica can become the new partition leader if needed.
-***For this release of Streams for Apache Kafka, the replicas are preconfigured. As the eval Kafka instance consists of only one broker, the number of partition replicas for the topic is set to `1`, as well as the minimum number of follower replicas that must be in sync with a partition leader. For a production Kafka broker on Streams for Apache Kafka these values will be `3` and `2` respectively. 
+* Message retention time is the amount of time that messages are retained in a topic before they are deleted or compacted, depending on the cleanup policy. Retention size is the maximum total size of all log segments in a partition before they are deleted or compacted. For this workshop you can keep the default values.
 
 << <<add-event-streaming.adoc#kafka-params, back to instructions>>

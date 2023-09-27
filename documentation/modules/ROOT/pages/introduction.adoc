@@ -10,46 +10,34 @@ A schematic overview of the current state of the application after the first pha
 
 image::globex-phase1.png[width=60%]
 
-To futher enhance the Globex Retail application, the business comes up with new requirements
+To further enhance the Globex Retail application, the business comes up with new requirements
 
 * The ability to track user activity on the website and the mobile application.
 * Highlight products which generate most customer interest as featured products.
 * Provide a personalized experience for users on the website and mobile application.
 
-== Challenges
-
-Adoption of new technologies such as event streaming requires time and new skills, which are not readily available inside the company.
-
-== Solution Approach
-In order to cope with these challenges: +
-
-* The team decides to use the Kafka ecosystem to track the user activity since it can scale 
-* A preference for *managed cloud services* for an easy and rapid adoption of new middleware components like  Apache Kafka. 
-
-This allows the teams to focus on the business requirements, without the need to invest in skills and infrastructure to deploy and maintain these components.
+The team decides to use the Kafka ecosystem to track the user activity since it can easily scale. Red Hat AMQ Streams (based on the upstream Strimzi) provides a Kubernetes/OpenShift-centric view of Apache Kafka, providing operator-based installation and upgrades, and cloud-native management of brokers, topics and security.
 
 
 == Goals of this lab
 In this module you will follow this journey:
 
-* Setup managed Kafka through Red Hat OpenShift Streams for Kafka
-* Add event streaming to the Globex retail application to track use activity 
+* Add event streaming to the Globex retail application to track user activity 
 * Use Kafka streams to then highlight featured products
-* Once an order is placed, and the records are pushed into a Kafka topic, leverage Red Hat OpenShift Connectors to connect the Streams for Apache Kafka instance to a third party cloud service to e.g. process or analyze the orders. 
 
 
 == Runtime Architecture
 
-image::globex-runtime-architecture.png[]
+image::globex-runtime-architecture-2.png[]
 
 Visitors engage with the Globex retail website in a number of ways:
 
-* view list of products
-* search for products
-* like a product / add a product to favourites
-* view product details 
-* add products to the shopping cart
-* place an order
+* View list of products
+* Search for products
+* Like a product / add a product to favourites
+* View product details 
+* Add products to the shopping cart
+* Place an order
 
 Each of these activities generate a stream of events which are captured by  the *User Activity Tracking* service. This service then pushes the events into the Kafka streaming platform. 
 The events can then be consumed by other services such as the *Product Recommendation* service which powers the list of featured products.
@@ -60,9 +48,6 @@ A new *Featured Products* section is created in the front-end web application to
 
 Here is a view of the deployment architecture
 
-image::globex-deployment-architecture.png[]
+image::globex-deployment-architecture-2.png[]
 
-* All services and the website are deployed on Red Hat OpenShift running on the cloud
-* The following services are  are running as fully managed and hosted services accessed through http://console.redhat.com[http://console.redhat.com^, window=redhatconsole]
-** Red Hat OpenShift Streams for Apache Kafka
-** Red Hat OpenShift Conectors
+All services and the website are deployed on Red Hat OpenShift running on the cloud.

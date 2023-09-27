@@ -1,6 +1,3 @@
 * xref:introduction.adoc[Introduction]
-* xref:red-hat-account.adoc[Create a Red Hat Account]
-* xref:provision-cloud-services.adoc[Provision Red Hat OpenShift Application Services]
 * xref:add-event-streaming.adoc[Add Event Streaming to an application]
-* xref:integrate-openshift-connectors.adoc[Integrate an application with OpenShift Connectors]
 * xref:appendix.adoc[Appendix]
