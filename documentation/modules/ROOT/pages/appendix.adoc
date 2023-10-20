@@ -5,7 +5,7 @@
 
 Service Binding を使用すると、接続の詳細とシークレットをアプリケーションに伝えて、アプリケーションがサービスにバインドできるようにすることができます。 このコンテキストでは、サービスとは、Kafka インスタンス、NoSQL データベースなど、あらゆるものにすることができます。Service Binding を使用すると、接続の詳細 (ホスト、ポート)、認証メカニズム (SASL、OAuth)、資格情報 (ユーザー名/パスワード、クライアント ID/クライアント シークレット)  をアプリケーションに構成する必要がなくなります。代わりに、Service Binding は、アプリケーションが使用できるように、これらの変数をアプリケーション コンテナーに (ファイルまたは環境変数として) 挿入します。 Quarkus Kubernetes Service Binding 拡張機能を使用すると、Quarkus アプリケーションがファイルとして挿入されたこれらの変数をコンテナのファイルシステムから自動的に取得できるようになり、アプリケーション リソース (構成ファイルなど) 自体で構成設定を指定する必要がなくなります。
 
-(参考) https://servicebinding.io/[Service Binding For Kubernetes ,role=external,window=_blank] .
+(参考) https://servicebinding.io/[Service Binding For Kubernetes ,role=external,window=_blank] 
 
 << <<add-event-streaming.adoc#event-goals, back to instructions>>
 
