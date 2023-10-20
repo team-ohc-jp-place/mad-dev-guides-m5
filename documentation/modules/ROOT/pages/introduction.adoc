@@ -2,52 +2,52 @@
 
 = はじめに
 
-== Globex Digital Transformation Journey
+== Globex のデジタル変革の歩み
 
-Globex is a fictitious retail company. The company recently started a digital transformation and cloud adoption journey. As part of this initiative, the development and devops teams have completed the modernization of the existing multi-tier monolithic retail e-commerce web application. The monolithic application was split in a couple of loosely-coupled microservices and the application was re-hosted on OpenShift.
+Globex は架空の小売会社です。 同社は最近、デジタル変革とクラウド導入の取り組みを開始しました。 この取り組みの一環として、開発チームと Devops チームは、既存の多層モノリシック小売電子商取引 Web アプリケーションの最新化を完了しました。 モノリシック アプリケーションは、疎結合されたいくつかのマイクロサービスに分割され、アプリケーションは OpenShift 上で再ホストされました。
 
-A schematic overview of the current state of the application after the first phase of the application modernization effort:
+アプリケーションの最新化作業の第 1 フェーズ後のアプリケーションの現在の状態の概略図は次のとおりです。
 
 image::globex-phase1.png[width=60%]
 
-To further enhance the Globex Retail application, the business comes up with new requirements
+Globex Retail アプリケーションをさらに強化するために、ビジネスが新しい要件を生み出します。
 
-* The ability to track user activity on the website and the mobile application.
-* Highlight products which generate most customer interest as featured products.
-* Provide a personalized experience for users on the website and mobile application.
+* Web サイトおよびモバイル アプリケーションでのユーザー アクティビティを追跡する機能
+* 最も顧客の関心を集めた製品を注目の製品として強調する
+* Web サイトとモバイル アプリケーションでユーザーにパーソナライズされたエクスペリエンスを提供する
 
-The team decides to use the Kafka ecosystem to track the user activity since it can easily scale. Red Hat AMQ Streams (based on the upstream Strimzi) provides a Kubernetes/OpenShift-centric view of Apache Kafka, providing operator-based installation and upgrades, and cloud-native management of brokers, topics and security.
-
-
-== Goals of this lab
-In this module you will follow this journey:
-
-* Add event streaming to the Globex retail application to track user activity 
-* Use Kafka streams to then highlight featured products
+チームは、簡単に拡張できる Kafka エコシステムを使用してユーザー アクティビティを追跡することにしました。 Red Hat AMQ Streams (アップストリームの Strimzi に基づく) は、Apache Kafka の Kubernetes/OpenShift 中心のビューを提供し、オペレーターベースのインストールとアップグレード、およびブローカー、トピック、セキュリティのクラウドネイティブ管理を提供します。
 
 
-== Runtime Architecture
+== このラボの目標
+このモジュールでは、次の手順に従います。
+
+* Globex 小売アプリケーションにイベント ストリーミングを追加してユーザー アクティビティを追跡する
+* Kafka ストリームを使用して注目の製品を強調表示する
+
+
+== ランタイムアーキテクチャ
 
 image::globex-runtime-architecture-2.png[]
 
-Visitors engage with the Globex retail website in a number of ways:
+サイトの訪問者は、さまざまな方法で Globex 小売 Web サイトを利用します。
 
-* View list of products
-* Search for products
-* Like a product / add a product to favourites
-* View product details 
-* Add products to the shopping cart
-* Place an order
+* 製品一覧を見る
+* 製品を検索する
+* 商品にいいね！する / 商品をお気に入りに追加
+* 製品の詳細を見る
+* ショッピングカートに商品を追加する
+* 注文する
 
-Each of these activities generate a stream of events which are captured by  the *User Activity Tracking* service. This service then pushes the events into the Kafka streaming platform. 
-The events can then be consumed by other services such as the *Product Recommendation* service which powers the list of featured products.
-A new *Featured Products* section is created in the front-end web application to showcase the top featured products. 
+これらの各アクティビティは、 *User Activity Tracking* サービスによってキャプチャされるイベント ストリームを生成します。 次に、このサービスはイベントを Kafka ストリーミング プラットフォームにプッシュします。
+イベントは、注目製品のリストを強化する *Product Recommendation*  サービスなどの他のサービスで使用できます。
+新しい *Featured Products* セクションがフロントエンド Web アプリケーションに作成され、注目製品が紹介されます。
 
 
-== Deployment Architecture
+== アーキテクチャ
 
-Here is a view of the deployment architecture
+デプロイメントアーキテクチャのビューは次のとおりです
 
 image::globex-deployment-architecture-2.png[]
 
-All services and the website are deployed on Red Hat OpenShift running on the cloud.
+すべてのサービスと Web サイトは、クラウド上で実行される Red Hat OpenShift 上にデプロイされます。

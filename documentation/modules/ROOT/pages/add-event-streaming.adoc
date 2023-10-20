@@ -1,70 +1,70 @@
 :icons: font
 :imagesdir: ../assets/images
 
-= Adding Event Streaming capabilities to an application
+= イベントストリーミング機能をアプリケーションに追加する
 
-== Introduction
+== 導入
 
-To support the business requirement of capturing and processing user activity on the Globex Coolstuff application, two new services have been developed:
+Globex Coolstuff アプリケーション上でユーザー アクティビティをキャプチャして処理するというビジネス要件をサポートするために、2 つの新しいサービスが開発されました。
 
-* *Activity Tracking service*: This service exposes a REST endpoint. User activities on the Globex website (such as opening a product page, liking a product etc.) generates an activity payload which is sent to the Activity Tracking REST endpoint. The service transforms this payload into a Kafka message which is sent to a topic on the Kafka broker.
-* *Recommendation Engine*: This service consumes and processes the events produced by the Activity Tracking service. The service uses the Kafka Streams library to continuously determine the top featured products (the products which generate the most activities).
-The service also exposes a REST endpoint to expose the list of featured products.
+* *Activity Tracking service* : このサービスは REST エンドポイントを公開します。 Globex Web サイト上のユーザー アクティビティ (製品ページを開く、製品を好きになるなど) によってアクティビティ ペイロードが生成され、アクティビティ追跡 REST エンドポイントに送信されます。 サービスは、このペイロードを Kafka メッセージに変換し、Kafka ブローカー上のトピックに送信します。
+* *Recommendation Engine* : このサービスは、アクティビティ追跡サービスによって生成されたイベントを消費(consume)して処理します。 このサービスは、Kafka Streams ライブラリを使用して、最も注目されている製品 (最も多くのアクティビティを生成する製品) を継続的に決定します。
+このサービスは、注目製品のリストを公開するための REST エンドポイントも公開します。
 
-Both services are developed using Quarkus, the Quarkus extensions for reactive messaging and Kafka Streams. The development of the services is outside the scope of this workshop, but you are encouraged to examine the source code of the applications on GitHub: link:https://github.com/cloud-services-summit-connect-2022/activity-tracking-service[Activity Tracking Service,role=external,window=_blank] and link:https://github.com/cloud-services-summit-connect-2022/recommendation-engine[Recommendation Engine,role=external,window=_blank]
+どちらのサービスも、Quarkus、Quarkus extensions for reactive messagingとKafka Streams 使用して開発されています。 サービスの開発はこのワークショップの範囲外ですが、GitHub でアプリケーションのソース コードを調べることをお勧めします。  ( link:https://github.com/cloud-services-summit-connect-2022/activity-tracking-service[Activity Tracking Service,role=external,window=_blank] , link:https://github.com/cloud-services-summit-connect-2022/recommendation-engine[Recommendation Engine,role=external,window=_blank] )
 
 [#event-goals]
-== Goals of this lab
+== このラボの目標
 
-In this part of the workshop you will connect the Activity Tracking and Recommendation Engine applications to the Apache Kafka broker using link:https://docs.openshift.com/container-platform/latest/applications/connecting_applications_to_services/understanding-service-binding-operator.html[Service Binding,role=external,window=_blank].
+ワークショップのこの部分では、 link:https://docs.openshift.com/container-platform/latest/applications/connecting_applications_to_services/understanding-service-binding-operator.html[Service Binding,role=external,window=_blank] を使用して、アクティビティ追跡アプリケーションとレコメンデーション エンジン アプリケーションを Apache Kafka ブローカーに接続します。
 
-You will be using the OpenShift Developer Console to configure the service binding. Note that these steps can also be achieved using the Red Hat OpenShift (`oc`) CLI.
+OpenShift 開発者コンソールを使用して Service Binding を設定します。 これらの手順は、Red Hat OpenShift (`oc`) CLI を使用して実行することもできることに注意してください。
 
-Note:  <<appendix.adoc#service-binding, Click to learn more about Service Binding>>
+Note:  <<appendix.adoc#service-binding, サービス バインディングの詳細>>
 
-== Step-By-Step Instructions
+== ステップバイステップの手順
 
-=== Explore the environment
+=== 環境の探索
 
-. In a browser window, navigate to the console of the lab OpenShift cluster at link:https://console-openshift-console.%SUBDOMAIN%/topology/ns/globex-%USERID%?view=graph[console^,role=external,window=openshiftconsole]. Login with your username and password (`%USERID%/openshift`). Open the *Developer* perspective in the *globex-%USERID%* namespace.
-. In the Developer perspective, open the *Topology* view. Expect to see something like this (rearrange the topology as you see fit):
+. ブラウザウィンドウで、 link:https://console-openshift-console.%SUBDOMAIN%/topology/ns/globex-%USERID%?view=graph[console^,role=external,window=openshiftconsole] のラボ OpenShift クラスターのコンソールに移動します。ユーザー名とパスワード (`%USERID%/openshift`) を使用してログインします。 *globex-%USERID%* namespaceで *Developer* パースペクティブを開きます。
+. Developer パースペクティブで、 *Topology* ビューを開きます。 次のような結果が表示されると予想されます (必要に応じてトポロジを再配置します)。
 +
 image::globex-deployment-topology.png[]
 +
-The deployed topology consists of:
+展開されたトポロジは次のもので構成されています。
 +
-** `globex-ui`: The Globex Coolstuff web application (Node.js/Angular). 
-** `catalog` and `catalog-database`: The Globex Coolstuff catalog service, consisting of the catalog database and the Spring Boot catalog microservice.
-** `inventory` and `inventory-database`: The Globex Coolstuff inventory service, consisting of the inventory database and the Quarkus inventory microservice.
-** `activity-tracking`: The Activity Tracking service. Notice that the deployment of the service is scaled to zero. The service will be scaled up once the connection to the Kafka broker is set up.
-**  `recommendation-engine`: The Recommendation Engine service. Notice that the deployment of the service is scaled to zero. The service will be scaled up once the connection to the Kafka broker is set up.
-** `activity-tracking-simulator`: A Quarkus service that simulates user activity events and sends them to the Activity Tracking service.
-** `kafka`: an instance of a Kafka broker, managed by the _AMQ Streams_ operator. In the Topology view, the kafka deployment shows up as a single unit, but in reality it consists of several deployments: a ZooKeeper (3 nodes) to manage and maintain the internal state of the Kafka broker, the Kafka broker itself (2 broker nodes) and the Entity operator, which manages topics and users.
-** `kafdrop`: a web UI for viewing Kafka topics and browsing consumer groups. The tool displays information such as brokers, topics, partitions, consumers, and lets you view messages.
+** `globex-ui`: Globex Coolstuff Web アプリケーション (Node.js/Angular)
+** `catalog` and `catalog-database`: Globex Coolstuff カタログ サービス。catalog-database と Spring Boot catalog マイクロサービスで構成される
+** `inventory` and `inventory-database`: Globex Coolstuff インベントリ サービス。inventory-database と Quarkus inventory マイクロサービスで構成される
+** `activity-tracking`: アクティビティ追跡サービス。 サービスのデプロイメントがゼロにスケールされていることに注意してください。 Kafka ブローカーへの接続が設定されると、サービスはスケールアップされます。
+**  `recommendation-engine`: レコメンデーション エンジン サービス。 サービスのデプロイメントがゼロにスケールされていることに注意してください。 Kafka ブローカーへの接続が設定されると、サービスはスケールアップされます。
+** `activity-tracking-simulator`: ユーザーアクティビティイベントをシミュレートし、それらをアクティビティ追跡サービスに送信するQuarkusサービス。
+** `kafka`: Kafka ブローカーのインスタンス。_AMQ Streams_ オペレーターによって管理されます。 トポロジ ビューでは、kafka デプロイメントは 1 つのユニットとして表示されますが、実際には複数のデプロイメントで構成されています。Kafka ブローカーの内部状態を管理および維持する ZooKeeper (3 ノード)、Kafka ブローカーそのもの (2 つのブローカー ノード) ) と、トピックとユーザーを管理する Entity オペレーター。
+** `kafdrop`: Kafka トピックを表示し、コンシューマ グループを参照するための Web UI。 このツールでは、ブローカー、トピック、パーティション、コンシューマーなどの情報が表示され、メッセージを表示できます。
 
-. Open the *Globex UI* application in a browser tab. To do so, click on the image:console-open-url.png[Open URL, 30, 30] icon next to the blue circle representing the *globex-ui* deployment in the Topology view. 
+. ブラウザー タブで *Globex UI* アプリケーションを開きます。 これを行うには、トポロジ ビューで *globex-ui* デプロイメントを表す青い円の横にある image:console-open-url.png[Open URL, 30, 30] アイコンをクリックします。
 +
-Alternatively, open a browser tab and navigate to link:https://globex-ui-globex-%USERID%.%SUBDOMAIN%/[globex-ui^, role=external,window=_blank]
+または、ブラウザーのタブを開いて、次の場所に移動します。 link:https://globex-ui-globex-%USERID%.%SUBDOMAIN%/[globex-ui^, role=external,window=_blank]
 +
-Expect to see the home page of the Globex Coolstuff web application:
+Globex Coolstuff Web アプリケーションのホームページが表示されます。
 +
 image::globex-coolstuff-home-page.png[]
-. Click on *Cool Stuff Store* in the top menu to see a paginated list of products:
+. トップメニューの *Cool Stuff Store*  をクリックすると、ページ分割された製品リストが表示されます。
 +
 image::globex-coolstuff-product-page.png[]
-. The _Featured_ pane on the home page is empty at the moment. Also the product list page has an empty bar above the product list. These elements will be populated once the recommendation engine is up and running. 
+. ホーム ページの _Featured_ ペインは現時点では空です。 また、製品リスト ページには、製品リストの上に空のバーがあります。 これらの要素は、レコメンデーション エンジンが起動して実行されると設定されます。
 
-=== Create a Kafka Topic in the AMQ Streams Kafka broker
+=== AMQ Streams Kafka ブローカーで Kafka トピックを作成
 
-The first thing to do is to create a topic in the Kafka broker which will receive the user activity events generated on the Globex web site.
+最初に、Globex Web サイトで生成されたユーザー アクティビティ イベントを受け取るトピックを Kafka ブローカーに作成します。
 
-When using AMQ Streams, topics can be created by deploying a Kubernetes Custom Resource (CR), that will be processed by the Entity Operator of AMQ Streams, which will use the Kafka APIs to create the topic on the broker.
+AMQ Streams を使用する場合、Kubernetes カスタム リソース (CR) をデプロイすることでトピックを作成できます。これは、Kafka API を使用してブローカー上にトピックを作成する AMQ Streams のエンティティ オペレーターによって処理されます。
 
-A custom resource can be created directly in the OpenShift console.
+カスタム リソースは OpenShift コンソールで直接作成できます。
 
-. On the OpenShift console, click on the image:console-import-yaml.png[] icon in the top menu on the right. This opens an editor where you can enter a Kubernetes resource definition in YAML or JSON format.
+. OpenShift コンソールで、右側の上部メニューにある image:console-import-yaml.png[] アイコンをクリックします。 これにより、YAML または JSON 形式で Kubernetes リソース定義を入力できるエディターが開きます。
 
-. Paste the following *KafkaTopic* Custom Resource in the editor.
+. 次の *KafkaTopic* カスタム リソースをエディターに貼り付けます。
 +
 [.console-input]
 [source,yaml]
@@ -83,40 +83,39 @@ spec:
   config: {}
 ----
 +
-Click *Create* to create the topic.
+ *Create* をクリックしてトピックを作成します。
 +
-This creates a topic named *globex.tracking* with a single partition and two replicas, and default configuration (the *config* element allows you to define additional properties like message retention time and size etc...).
+これにより、1 つのパーティションと 2 つのレプリカ、およびデフォルト構成を持つ *globex.tracking* という名前のトピックが作成されます (*config* 要素を使用すると、メッセージの保持時間やサイズなどの追加のプロパティを定義できます)。
 
-. The Kafdrop UI can be used to verify that the topic has been correctly created. In the Topology view of the *globex-%USERID%* namespace, click on the image:console-open-url.png[Open URL, 30, 30] icon next to the blue circle representing the *kafdrop* deployment.
+. Kafdrop UI を使用して、トピックが正しく作成されたことを確認できます。 *globex-%USERID%* namespace の Topology ビューで、 *kafdrop* デプロイメントを表す青い円の横にある image:console-open-url.png[Open URL, 30, 30] アイコンをクリックします。
 +
-Alternatively, open a browser tab and navigate to link:https://kafdrop-globex-%USERID%.%SUBDOMAIN%/[kafdrop^, role=external,window=_blank].
+または、ブラウザーのタブを開いて、次の場所に移動します。 link:https://kafdrop-globex-%USERID%.%SUBDOMAIN%/[kafdrop^, role=external,window=_blank].
 
-. This redirects you to the Kafdrop home page. Scroll down to see the list of topics. Expect to see the *globex.tracking* topics, which you just created.
+. これにより、Kafdrop ホームページにリダイレクトされます。 下にスクロールしてトピックのリストを表示します。 作成したばかりの *globex.tracking* トピックが表示されているはずです。
 +
 image::kafdrop-landing-page.png[]
 +
-Click on the topic name to see the details of the topic. Notice that the topic has a single partition, and is empty at the moment.
+トピック名をクリックするとトピックの詳細が表示されます。 トピックには一つのパーティションがあり、現時点では空であることに注意してください。
 +
 image::kafdrop-topic.png[]
 
 
-=== Binding applications to Apache Kafka
+=== アプリケーションを Apache Kafka にバインドする
 
-In order for applications to be able to connect to a Kafka broker, the application needs to be configured with connection details like the Kafka bootstrap server URL, the security protocol and the user credentials. This is where link:https://docs.openshift.com/container-platform/4.10/applications/connecting_applications_to_services/understanding-service-binding-operator.html[Service Binding,role=external,window=_blank] comes in. Service Binding allows to inject connection details from an e.g. secret directly into a pod. 
+アプリケーションが Kafka ブローカーに接続できるようにするには、Kafka ブートストラップ サーバー URL、セキュリティ プロトコル、ユーザー資格情報などの接続の詳細を使用してアプリケーションを構成する必要があります。ここで  link:https://docs.openshift.com/container-platform/4.10/applications/connecting_applications_to_services/understanding-service-binding-operator.html[Service Binding,role=external,window=_blank] の出番です。Service Bindingを使用すると、接続の詳細（例えばシークレット）をポッド に直接挿入できます。
 
-Binding applications to services using Service Binding requires the Service Binding operator to be installed on the OpenShift cluster. The operator has been installed on your OpenShift cluster.
+Service Binding を使用してアプリケーションをサービスにバインドするには、Service Binding オペレーターを OpenShift クラスターにインストールする必要があります。 オペレーターは OpenShift クラスターにインストールされています。
+. Kafka ブローカーのプロビジョニングの一環として、シークレット *kafka-client-secret* が *globex-%USERID%* namespaceに作成されます。 シークレットの内容を表示するには、Developer  パースペクティブの左側のメニューで *Secrets* をクリックします。 *globex-%USERID%* namespace を指していることを確認してください。
 
-. As part of the provisioning of the Kafka broker, a secret *kafka-client-secret* was created in the *globex-%USERID%* namespace. To view the contents of the secret, click on *Secrets* in the left menu of the Developer perspective. Make sure you are pointing to the *globex-%USERID%* namespace.
-
-. In the list of secrets, locate the *kafka-client-secret* secret, and click on the name of the secret to open the secret details. Click on *Reveal values* to see the actual values stored in the secret.
+. シークレットのリストで *kafka-client-secret* シークレットを見つけ、シークレットの名前をクリックしてシークレットの詳細を開きます。 *Reveal values* をクリックすると、シークレットに保存されている実際の値が表示されます。
 +
 image::openshift-console-secret.png[]
 
-. To bind the *Activity Tracking service* and *Recommendation Engine* applications to the Kafka broker, create a *ServiceBinding* Custom Resource.
+.  *Activity Tracking service* および *Recommendation Engine* アプリケーションを Kafka ブローカーにバインドするには、 *ServiceBinding* カスタム リソースを作成します。
 +
-On the OpenShift console, click on the image:console-import-yaml.png[] icon in the top menu on the right. This opens an editor where you can enter a Kubernetes resource definition in YAML or JSON format.
+OpenShift コンソールで、右側の上部メニューにある image:console-import-yaml.png[] アイコンをクリックします。 これにより、YAML または JSON 形式で Kubernetes リソース定義を入力できるエディターが開きます。
 +
-Paste the following *ServiceBinding* Custom Resource in the editor.
+次の *ServiceBinding* カスタム リソースをエディターに貼り付けます。
 +
 [.console-input]
 [source,yaml]
@@ -142,35 +141,34 @@ spec:
       version: v1
 ----
 +
-Click *Create* to create the Service Binding resource.
+ *Create* をクリックして、Service Binding リソースを作成します。
 +
-The Service Binding operator detects the creation of the Custom Resource, looks for deployments which are labeled with *service-binding/type: kafka* and injects the contents of the *kafka-client-secret* into the deployments. Both the *activity-tracking* and the *recommendation-engine* deployments have the expected label.
+Service Binding オペレーターはカスタム リソースの作成を検出し、 *service-binding/type: kafka* のラベルが付いたデプロイメントを探し、 *kafka-client-secret* の内容をデプロイメントに挿入します。  *activity-tracking* と *recommendation-engine* の両方のデプロイメントには、そのラベルが付いています。
 
-. Once the service binding is done, the status of the ServiceBinding Custom Resource moves to *Connected*.
+. Service Binding が完了すると、ServiceBinding カスタム リソースのステータスは *Connected* に移行します。
 +
 image::openshift-console-service-binding-connected.png[]
 
-. To check the injection of the secret by the Service Binding operator, navigate to the Topology view of the OpenShift console at link:https://console-openshift-console.%SUBDOMAIN%/topology/ns/globex-%USERID%?view=graph[OpenShift Console^,role=external,window=openshiftconsole]. Click on the *activity-tracking* deployment to open the details pane, and click on the deployment name (above the Details, Resources and Observe tabs) to open the full details of the Deployment. 
+. Service Binding オペレーターによるシークレットの挿入を確認するには、 link:https://console-openshift-console.%SUBDOMAIN%/topology/ns/globex-%USERID%?view=graph[OpenShift Console^,role=external,window=openshiftconsole] にある OpenShift コンソールの Topology ビューに移動します。 *activity-tracking* デプロイメントをクリックして詳細ペインを開き、デプロイメント名 (Details、Resources、Observe タブの上にある) をクリックします。 デプロイメントの完全な詳細が開きます。
 +
 image::openshift-console-topology-deployment-details.png[]
 +
-Scroll down to the *Volumes* section. Notice that the service binding occurs by injecting a secret into the pod:
+ *Volumes* セクションまで下にスクロールします。 Service Binding は、シークレットをポッドに挿入することによって行われることに注意してください。
 +
 image::service-binding-secret.png[]
 +
-Return to the Topology view.
+Topology ビューに戻ります。
 
-. Scale the *activity-tracking* deployment to 1 replica. You can do so by clicking on the *activity-tracking* deployment in the Topology view, and in the details window select the *Details* tab, and click the arrow next to the circle to scale the deployment.
+.  *activity-tracking* デプロイメントを 1 つのレプリカにスケールします。 これを行うには、Topology ビューで *activity-tracking* デプロイメントをクリックし、詳細ウィンドウで *Details*  タブを選択し、円の横にある矢印をクリックしてデプロイメントをスケールします。
 +
 image::openshift-console-scale-deployment.png[]
 
-. Check the logs of the *activity-tracking* pod, and notice that the pod successfully connects to the Kafka broker instance. +
-To see the logs, click the *Resources* tab of the deployment, and click on the *View logs* link. +
+. *activity-tracking* ポッドのログを確認し、ポッドが Kafka ブローカー インスタンスに正常に接続していることを確認します。　+
+ログを表示するには、deployment の *Resources* タブをクリックし、 *View logs*  リンクをクリックします。 +
 +
 image::openshift-console-pod-logs.png[]
 +
-Expect to see something like: 
-+
+次のようなものが表示されます。+
 ----
 [...]
 2023-06-13 10:00:31,873 INFO [io.sma.rea.mes.kafka] (main) SRMSG18258: Kafka producer kafka-producer-tracking-event, connected to Kafka brokers 'kafka-kafka-bootstrap.globex-user1.svc.cluster.local:9092', is configured to write records to 'globex.tracking'
@@ -179,49 +177,49 @@ Expect to see something like:
 2023-06-13 10:00:33,969 INFO [io.quarkus] (main) Installed features: [cdi, kafka-client, resteasy-reactive, smallrye-context-propagation, smallrye-health, smallrye-reactive-messaging, smallrye-reactive-messaging-kafka, vertx]
 ----
 
-. Go back to the Topology view, and scale up the *recommendation-engine* deployment to 1 pod.
+. Topology ビューに戻り、 *recommendation-engine* deployment を 1 ポッドにスケールアップします。
 
-. Once the *recommendation-engine* is up and running, check in the Kafdrop UI at link:https://kafdrop-globex-%USERID%.%SUBDOMAIN%/[kafdrop^, role=external,window=_blank] that a number of new topics have been created:
+.  *recommendation-engine* が起動して実行されたら、 link:https://kafdrop-globex-%USERID%.%SUBDOMAIN%/[kafdrop^, role=external,window=_blank] の Kafdrop UI で、多数の新しいトピックが作成されたことを確認します。
 +
 image::kafdrop-kafka-streams-topics.png[]
 +
-Those are the topics created by the Kafka Streams topology in the Recommendation Engine to calculate the top featured products based on activity events.
+これらは、アクティビティ イベントに基づいて上位の注目製品を計算するために、レコメンデーション エンジンの Kafka Streams トポロジによって作成されたトピックです。
 
 
-=== Testing the Globex Coolstuff application
+=== Globex Coolstuff アプリケーションのテスト
 
-Now that the Activity Tracking and Recommendation Engine apps are up and running, we can test the generation of activity events and the calculation of the top featured products.
+アクティビティ追跡アプリとレコメンデーション エンジン アプリが起動して実行できるようになったので、アクティビティ イベントの生成と上位の注目製品の計算をテストできます。
 
-The deployment topology for the workshop includes an activity simulator service which will generate a number of activity events randomly distributed over a list of products. These activity events are sent to the Activity Tracking service and transformed into Kafka messages in the `globex.tracking` topic. These messages are consumed by the Recommendation Engine app to calculate the top featured products.
+ワークショップのデプロイメント　トポロジには、製品のリストにランダムに分散された多数のアクティビティ イベントを生成するアクティビティ シミュレーター サービスが含まれています。 これらのアクティビティ イベントはアクティビティ追跡サービスに送信され、 `globex.tracking` トピック内の Kafka メッセージに変換されます。 これらのメッセージは、トップの注目製品を計算するために レコメンデーション エンジン アプリによって使用されます。
 
-. In a browser window, navigate to the Topology view of the lab's OpenShift cluster at link:https://console-openshift-console.%SUBDOMAIN%/topology/ns/globex-%USERID%?view=graph[OpenShift Console^,role=external,window=openshiftconsole]. 
-. Open the URL to the *activity-tracking-simulator* application by clicking the image:console-open-url.png[30,30] icon next to the blue circle representing the *activity-tracking-simulator* deployment. 
+. ブラウザウィンドウで、 link:https://console-openshift-console.%SUBDOMAIN%/topology/ns/globex-%USERID%?view=graph[OpenShift Console^,role=external,window=openshiftconsole] にあるラボの OpenShift クラスターの Topology ビューに移動します。
+. *activity-tracking-simulator* デプロイメントを表す青い円の横にある image:console-open-url.png[30,30] アイコンをクリックして、 *activity-tracking-simulator* アプリケーションへの URL を開きます。
 +
-Alternatively, open a browser tab and navigate to link:https://activity-tracking-simulator-globex-%USERID%.%SUBDOMAIN%/[Activity Tracking Simulator, role=external,window=activity-tracking-simulator].
-. This opens a Swagger UI page which allows you to use the REST API of the application. The REST application has only one operation, `POST /simulate`.
+または、ブラウザーのタブを開いて、 link:https://activity-tracking-simulator-globex-%USERID%.%SUBDOMAIN%/[Activity Tracking Simulator, role=external,window=activity-tracking-simulator] に移動します。
+. これにより、アプリケーションの REST API を使用できる Swagger UI ページが開きます。 REST アプリケーションには `POST /simulate` という操作が 1 つだけあります。
 +
 image::activity-tracking-simulator-swagger-ui.png[]
-. Generate a number of activity events. Click the *Try it out* button, and set `count` to any value between 100 and 1000. Click *Execute*.
+. 多数のアクティビティ イベントを生成します。 *Try it out* ボタンをクリックし、 `count` を 100 ～ 1000 の任意の値に設定します。 *Execute* をクリックします。
 
-. You can use the Kafdrop UI to inspect the messages sent to the *globex.tracking* topic of the Kafka broker. +
-Navigate to the Kafdrop UI at link:https://kafdrop-globex-%USERID%.%SUBDOMAIN%/[kafdrop^, role=external,window=_blank] and click on the *globex-tracking* topic in the topic list. Notice the activity event messages produced by the Activity Tracking service:
+. Kafdrop UI を使用して、Kafka ブローカーの *globex.tracking* トピックに送信されたメッセージを検査できます。 +
+link:https://kafdrop-globex-%USERID%.%SUBDOMAIN%/[kafdrop^, role=external,window=_blank] から Kafdrop UI に移動します。トピック リストで *globex-tracking* トピックをクリックします。 アクティビティ追跡サービスによって生成されるアクティビティ イベント メッセージに注目してください。
 +
 image::kafdrop-topic-messages.png[]
 +
-Click on the link of the only partition of this topic to see the list of messages. Click on the image:kafdrop-expand-message.png[] icon next to a message to see its content.
+このトピックの唯一のパーティションのリンクをクリックすると、メッセージのリストが表示されます。 メッセージの横にある image:kafdrop-expand-message.png[] アイコンをクリックすると、その内容が表示されます。
 +
 image::kafdrop-topic-messages-detail.png[]
 
-. The featured product list calculated by the Recommendation Engine is produced to the *globex.recommendation-product-score-aggregated-changelog* topic. The list is recalculated roughly every 10 seconds as long as activity events are produced. Every calculation produces a message to the changelog topic. The last message in the topic represents the latest top featured list.
+. レコメンデーション エンジンによって計算された注目の製品リストは、 *globex.recommendation-product-score-aggregated-changelog* トピックに生成されます。 アクティビティ イベントが生成される限り、リストはおよそ 10 秒ごとに再計算されます。 すべての計算により、変更ログ トピックへのメッセージが生成されます。 トピックの最後のメッセージは、最新の注目リストを表します。
 +
 image::kafdrop-messages-aggregated-chainlog.png[]
 
-. In a browser window, navigate to the home page of the Globex Coolstuff web application. Notice that the home page now shows a list of featured products.
+. ブラウザ ウィンドウで、Globex Coolstuff Web アプリケーションのホームページに移動します。 ホーム ページに注目の製品のリストが表示されるようになりました。
 +
 image::globex-coolstuff-home-page-featured.png[]
 +
-Also, the product page now shows a banner with the featured products.
+また、製品ページに注目製品のバナーが表示されるようになりました。
 +
 image::globex-coolstuff-product-page-featured.png[]
 
-Congratulations! You reached the end of this part of the workshop, in which you added event streaming capabilities to the Globex Coolstuff application, using AMQ Streams, and Service Binding to connect your apps to the Kafka instance. 
+おめでとうございます！ ワークショップは終了しました。ここでは、AMQ Streams と Service BInding を使用して、アプリを Kafka インスタンスに接続するイベント ストリーミング機能を Globex Coolstuff アプリケーションに追加しました。
