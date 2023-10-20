@@ -11,7 +11,7 @@ Globex Coolstuff アプリケーション上でユーザー アクティビテ�
 * *Recommendation Engine* : このサービスは、アクティビティ追跡サービスによって生成されたイベントを消費(consume)して処理します。 このサービスは、Kafka Streams ライブラリを使用して、最も注目されている製品 (最も多くのアクティビティを生成する製品) を継続的に決定します。
 このサービスは、注目製品のリストを公開するための REST エンドポイントも公開します。
 
-どちらのサービスも、Quarkus、Quarkus extensions for reactive messagingとKafka Streams 使用して開発されています。 サービスの開発はこのワークショップの範囲外ですが、GitHub でアプリケーションのソース コードを調べることをお勧めします。  ( link:https://github.com/cloud-services-summit-connect-2022/activity-tracking-service[Activity Tracking Service,role=external,window=_blank] , link:https://github.com/cloud-services-summit-connect-2022/recommendation-engine[Recommendation Engine,role=external,window=_blank] )
+どちらのサービスも、Quarkus、Quarkus extensions for reactive messagingとKafka Streams 使用して開発されています。 サービスの開発はこのワークショップの範囲外ですが、GitHub でアプリケーションのソース コードを調べることをお勧めします。  ( link:https://github.com/cloud-services-summit-connect-2022/activity-tracking-service[Activity Tracking Service,role=external,window=_blank] 、 link:https://github.com/cloud-services-summit-connect-2022/recommendation-engine[Recommendation Engine,role=external,window=_blank] )
 
 [#event-goals]
 == このラボの目標
@@ -20,14 +20,14 @@ Globex Coolstuff アプリケーション上でユーザー アクティビテ�
 
 OpenShift 開発者コンソールを使用して Service Binding を設定します。 これらの手順は、Red Hat OpenShift (`oc`) CLI を使用して実行することもできることに注意してください。
 
-Note:  <<appendix.adoc#service-binding, サービス バインディングの詳細>>
+Note:  <<appendix.adoc#service-binding, Service Binding の詳細>>
 
 == ステップバイステップの手順
 
 === 環境の探索
 
-. ブラウザウィンドウで、 link:https://console-openshift-console.%SUBDOMAIN%/topology/ns/globex-%USERID%?view=graph[console^,role=external,window=openshiftconsole] のラボ OpenShift クラスターのコンソールに移動します。ユーザー名とパスワード (`%USERID%/openshift`) を使用してログインします。 *globex-%USERID%* namespaceで *Developer* パースペクティブを開きます。
-. Developer パースペクティブで、 *Topology* ビューを開きます。 次のような結果が表示されると予想されます (必要に応じてトポロジを再配置します)。
+. ブラウザウィンドウで、 link:https://console-openshift-console.%SUBDOMAIN%/topology/ns/globex-%USERID%?view=graph[console^,role=external,window=openshiftconsole] からラボ OpenShift クラスターのコンソールに移動します。ユーザー名とパスワード (`%USERID%/openshift`) を使用してログインします。 *globex-%USERID%* namespaceで *Developer* パースペクティブを開きます。
+. Developer パースペクティブで、 *Topology* ビューを開きます。 次のような結果が表示されるはずです (必要に応じてトポロジを再配置します)。
 +
 image::globex-deployment-topology.png[]
 +
@@ -44,7 +44,7 @@ image::globex-deployment-topology.png[]
 
 . ブラウザー タブで *Globex UI* アプリケーションを開きます。 これを行うには、トポロジ ビューで *globex-ui* デプロイメントを表す青い円の横にある image:console-open-url.png[Open URL, 30, 30] アイコンをクリックします。
 +
-または、ブラウザーのタブを開いて、次の場所に移動します。 link:https://globex-ui-globex-%USERID%.%SUBDOMAIN%/[globex-ui^, role=external,window=_blank]
+または、ブラウザーのタブを開いて、 link:https://globex-ui-globex-%USERID%.%SUBDOMAIN%/[globex-ui^, role=external,window=_blank] に移動します。
 +
 Globex Coolstuff Web アプリケーションのホームページが表示されます。
 +
@@ -52,7 +52,7 @@ image::globex-coolstuff-home-page.png[]
 . トップメニューの *Cool Stuff Store*  をクリックすると、ページ分割された製品リストが表示されます。
 +
 image::globex-coolstuff-product-page.png[]
-. ホーム ページの _Featured_ ペインは現時点では空です。 また、製品リスト ページには、製品リストの上に空のバーがあります。 これらの要素は、レコメンデーション エンジンが起動して実行されると設定されます。
+. ホーム ページの _Featured_ ペインは現時点では空です。 また、製品リスト ページには、製品リストの上に空のバーがあります。 これらの要素は、レコメンデーション エンジンが起動して実行されると表示されます。
 
 === AMQ Streams Kafka ブローカーで Kafka トピックを作成
 
@@ -83,13 +83,13 @@ spec:
   config: {}
 ----
 +
- *Create* をクリックしてトピックを作成します。
+*Create* をクリックしてトピックを作成します。
 +
 これにより、1 つのパーティションと 2 つのレプリカ、およびデフォルト構成を持つ *globex.tracking* という名前のトピックが作成されます (*config* 要素を使用すると、メッセージの保持時間やサイズなどの追加のプロパティを定義できます)。
 
 . Kafdrop UI を使用して、トピックが正しく作成されたことを確認できます。 *globex-%USERID%* namespace の Topology ビューで、 *kafdrop* デプロイメントを表す青い円の横にある image:console-open-url.png[Open URL, 30, 30] アイコンをクリックします。
 +
-または、ブラウザーのタブを開いて、次の場所に移動します。 link:https://kafdrop-globex-%USERID%.%SUBDOMAIN%/[kafdrop^, role=external,window=_blank].
+または、ブラウザーのタブを開いて、 link:https://kafdrop-globex-%USERID%.%SUBDOMAIN%/[kafdrop^, role=external,window=_blank] に移動します。
 
 . これにより、Kafdrop ホームページにリダイレクトされます。 下にスクロールしてトピックのリストを表示します。 作成したばかりの *globex.tracking* トピックが表示されているはずです。
 +
@@ -105,6 +105,7 @@ image::kafdrop-topic.png[]
 アプリケーションが Kafka ブローカーに接続できるようにするには、Kafka ブートストラップ サーバー URL、セキュリティ プロトコル、ユーザー資格情報などの接続の詳細を使用してアプリケーションを構成する必要があります。ここで  link:https://docs.openshift.com/container-platform/4.10/applications/connecting_applications_to_services/understanding-service-binding-operator.html[Service Binding,role=external,window=_blank] の出番です。Service Bindingを使用すると、接続の詳細（例えばシークレット）をポッド に直接挿入できます。
 
 Service Binding を使用してアプリケーションをサービスにバインドするには、Service Binding オペレーターを OpenShift クラスターにインストールする必要があります。 オペレーターは OpenShift クラスターにインストールされています。
+
 . Kafka ブローカーのプロビジョニングの一環として、シークレット *kafka-client-secret* が *globex-%USERID%* namespaceに作成されます。 シークレットの内容を表示するには、Developer  パースペクティブの左側のメニューで *Secrets* をクリックします。 *globex-%USERID%* namespace を指していることを確認してください。
 
 . シークレットのリストで *kafka-client-secret* シークレットを見つけ、シークレットの名前をクリックしてシークレットの詳細を開きます。 *Reveal values* をクリックすると、シークレットに保存されている実際の値が表示されます。
@@ -141,7 +142,7 @@ spec:
       version: v1
 ----
 +
- *Create* をクリックして、Service Binding リソースを作成します。
+*Create* をクリックして、Service Binding リソースを作成します。
 +
 Service Binding オペレーターはカスタム リソースの作成を検出し、 *service-binding/type: kafka* のラベルが付いたデプロイメントを探し、 *kafka-client-secret* の内容をデプロイメントに挿入します。  *activity-tracking* と *recommendation-engine* の両方のデプロイメントには、そのラベルが付いています。
 
@@ -149,17 +150,17 @@ Service Binding オペレーターはカスタム リソースの作成を検出
 +
 image::openshift-console-service-binding-connected.png[]
 
-. Service Binding オペレーターによるシークレットの挿入を確認するには、 link:https://console-openshift-console.%SUBDOMAIN%/topology/ns/globex-%USERID%?view=graph[OpenShift Console^,role=external,window=openshiftconsole] にある OpenShift コンソールの Topology ビューに移動します。 *activity-tracking* デプロイメントをクリックして詳細ペインを開き、デプロイメント名 (Details、Resources、Observe タブの上にある) をクリックします。 デプロイメントの完全な詳細が開きます。
+. Service Binding オペレーターによるシークレットの挿入を確認するには、 link:https://console-openshift-console.%SUBDOMAIN%/topology/ns/globex-%USERID%?view=graph[OpenShift Console^,role=external,window=openshiftconsole] から OpenShift コンソールの Topology ビューに移動します。 *activity-tracking* デプロイメントをクリックして詳細ペインを開き、デプロイメント名 (Details、Resources、Observe タブの上にある) をクリックします。 デプロイメントの完全な詳細が開きます。
 +
 image::openshift-console-topology-deployment-details.png[]
 +
- *Volumes* セクションまで下にスクロールします。 Service Binding は、シークレットをポッドに挿入することによって行われることに注意してください。
+*Volumes* セクションまで下にスクロールします。 Service Binding は、シークレットをポッドに挿入することによって行われることに注意してください。
 +
 image::service-binding-secret.png[]
 +
 Topology ビューに戻ります。
 
-.  *activity-tracking* デプロイメントを 1 つのレプリカにスケールします。 これを行うには、Topology ビューで *activity-tracking* デプロイメントをクリックし、詳細ウィンドウで *Details*  タブを選択し、円の横にある矢印をクリックしてデプロイメントをスケールします。
+. *activity-tracking* デプロイメントを 1 つのレプリカにスケールします。 これを行うには、Topology ビューで *activity-tracking* デプロイメントをクリックし、詳細ウィンドウで *Details*  タブを選択し、円の横にある矢印をクリックしてデプロイメントをスケールします。
 +
 image::openshift-console-scale-deployment.png[]
 
@@ -168,7 +169,8 @@ image::openshift-console-scale-deployment.png[]
 +
 image::openshift-console-pod-logs.png[]
 +
-次のようなものが表示されます。+
+次のようなものが表示されます。
++
 ----
 [...]
 2023-06-13 10:00:31,873 INFO [io.sma.rea.mes.kafka] (main) SRMSG18258: Kafka producer kafka-producer-tracking-event, connected to Kafka brokers 'kafka-kafka-bootstrap.globex-user1.svc.cluster.local:9092', is configured to write records to 'globex.tracking'
@@ -179,7 +181,7 @@ image::openshift-console-pod-logs.png[]
 
 . Topology ビューに戻り、 *recommendation-engine* deployment を 1 ポッドにスケールアップします。
 
-.  *recommendation-engine* が起動して実行されたら、 link:https://kafdrop-globex-%USERID%.%SUBDOMAIN%/[kafdrop^, role=external,window=_blank] の Kafdrop UI で、多数の新しいトピックが作成されたことを確認します。
+.  *recommendation-engine* が起動して実行されたら、 link:https://kafdrop-globex-%USERID%.%SUBDOMAIN%/[kafdrop^, role=external,window=_blank] から Kafdrop UI で、多数の新しいトピックが作成されたことを確認します。
 +
 image::kafdrop-kafka-streams-topics.png[]
 +
@@ -192,7 +194,7 @@ image::kafdrop-kafka-streams-topics.png[]
 
 ワークショップのデプロイメント　トポロジには、製品のリストにランダムに分散された多数のアクティビティ イベントを生成するアクティビティ シミュレーター サービスが含まれています。 これらのアクティビティ イベントはアクティビティ追跡サービスに送信され、 `globex.tracking` トピック内の Kafka メッセージに変換されます。 これらのメッセージは、トップの注目製品を計算するために レコメンデーション エンジン アプリによって使用されます。
 
-. ブラウザウィンドウで、 link:https://console-openshift-console.%SUBDOMAIN%/topology/ns/globex-%USERID%?view=graph[OpenShift Console^,role=external,window=openshiftconsole] にあるラボの OpenShift クラスターの Topology ビューに移動します。
+. ブラウザウィンドウで、 link:https://console-openshift-console.%SUBDOMAIN%/topology/ns/globex-%USERID%?view=graph[OpenShift Console^,role=external,window=openshiftconsole] からラボの OpenShift クラスターの Topology ビューに移動します。
 . *activity-tracking-simulator* デプロイメントを表す青い円の横にある image:console-open-url.png[30,30] アイコンをクリックして、 *activity-tracking-simulator* アプリケーションへの URL を開きます。
 +
 または、ブラウザーのタブを開いて、 link:https://activity-tracking-simulator-globex-%USERID%.%SUBDOMAIN%/[Activity Tracking Simulator, role=external,window=activity-tracking-simulator] に移動します。
@@ -214,7 +216,7 @@ image::kafdrop-topic-messages-detail.png[]
 +
 image::kafdrop-messages-aggregated-chainlog.png[]
 
-. ブラウザ ウィンドウで、Globex Coolstuff Web アプリケーションのホームページに移動します。 ホーム ページに注目の製品のリストが表示されるようになりました。
+. ブラウザ ウィンドウで、Globex Coolstuff Web アプリケーションのホームページに移動します。 ホーム ページに Featured 製品のリストが表示されるようになりました。
 +
 image::globex-coolstuff-home-page-featured.png[]
 +
