@@ -3,11 +3,11 @@
 
 = イベントストリーミング機能をアプリケーションに追加する
 
-== 導入
+== イントロダクション
 
 Globex Coolstuff アプリケーション上でユーザー アクティビティをキャプチャして処理するというビジネス要件をサポートするために、2 つの新しいサービスが開発されました。
 
-* *Activity Tracking service* : このサービスは REST エンドポイントを公開します。 Globex Web サイト上のユーザー アクティビティ (製品ページを開く、製品を好きになるなど) によってアクティビティ ペイロードが生成され、アクティビティ追跡 REST エンドポイントに送信されます。 サービスは、このペイロードを Kafka メッセージに変換し、Kafka ブローカー上のトピックに送信します。
+* *Activity Tracking service* : このサービスは REST エンドポイントを公開します。 Globex Web サイト上のユーザー アクティビティ (製品ページを開く、製品に「いいね！」をするなど) によってアクティビティ ペイロードが生成され、アクティビティ追跡 REST エンドポイントに送信されます。 サービスは、このペイロードを Kafka メッセージに変換し、Kafka ブローカー上のトピックに送信します。
 * *Recommendation Engine* : このサービスは、アクティビティ追跡サービスによって生成されたイベントを消費(consume)して処理します。 このサービスは、Kafka Streams ライブラリを使用して、最も注目されている製品 (最も多くのアクティビティを生成する製品) を継続的に決定します。
 このサービスは、注目製品のリストを公開するための REST エンドポイントも公開します。
 
@@ -27,22 +27,22 @@ Note:  <<appendix.adoc#service-binding, Service Binding の詳細>>
 === 環境の探索
 
 . ブラウザウィンドウで、 link:https://console-openshift-console.%SUBDOMAIN%/topology/ns/globex-%USERID%?view=graph[console^,role=external,window=openshiftconsole] からラボ OpenShift クラスターのコンソールに移動します。ユーザー名とパスワード (`%USERID%/openshift`) を使用してログインします。 *globex-%USERID%* namespaceで *Developer* パースペクティブを開きます。
-. Developer パースペクティブで、 *Topology* ビューを開きます。 次のような結果が表示されるはずです (必要に応じてトポロジを再配置します)。
+. Developer パースペクティブで、 *Topology* ビューを開きます。 次のような結果が表示されるはずです (必要に応じてトポロジを並べ替えてください)。
 +
 image::globex-deployment-topology.png[]
 +
 展開されたトポロジは次のもので構成されています。
 +
 ** `globex-ui`: Globex Coolstuff Web アプリケーション (Node.js/Angular)
-** `catalog` and `catalog-database`: Globex Coolstuff カタログ サービス。catalog-database と Spring Boot catalog マイクロサービスで構成される
-** `inventory` and `inventory-database`: Globex Coolstuff インベントリ サービス。inventory-database と Quarkus inventory マイクロサービスで構成される
+** `catalog` と `catalog-database`: Globex Coolstuff カタログ サービス。catalog-database と Spring Boot catalog マイクロサービスで構成される
+** `inventory` と `inventory-database`: Globex Coolstuff インベントリ サービス。inventory-database と Quarkus inventory マイクロサービスで構成される
 ** `activity-tracking`: アクティビティ追跡サービス。 サービスのデプロイメントがゼロにスケールされていることに注意してください。 Kafka ブローカーへの接続が設定されると、サービスはスケールアップされます。
 **  `recommendation-engine`: レコメンデーション エンジン サービス。 サービスのデプロイメントがゼロにスケールされていることに注意してください。 Kafka ブローカーへの接続が設定されると、サービスはスケールアップされます。
 ** `activity-tracking-simulator`: ユーザーアクティビティイベントをシミュレートし、それらをアクティビティ追跡サービスに送信するQuarkusサービス。
-** `kafka`: Kafka ブローカーのインスタンス。_AMQ Streams_ オペレーターによって管理されます。 トポロジ ビューでは、kafka デプロイメントは 1 つのユニットとして表示されますが、実際には複数のデプロイメントで構成されています。Kafka ブローカーの内部状態を管理および維持する ZooKeeper (3 ノード)、Kafka ブローカーそのもの (2 つのブローカー ノード) ) と、トピックとユーザーを管理する Entity オペレーター。
+** `kafka`: Kafka ブローカーのインスタンス。_AMQ Streams_ オペレーターによって管理されます。 Topology ビューでは、kafka デプロイメントは 1 つのユニットとして表示されますが、実際には複数のデプロイメントで構成されています。Kafka ブローカーの内部状態を管理および維持する ZooKeeper (3 ノード)、Kafka ブローカーそのもの (2 つのブローカー ノード) ) と、トピックとユーザーを管理する Entity オペレーター。
 ** `kafdrop`: Kafka トピックを表示し、コンシューマ グループを参照するための Web UI。 このツールでは、ブローカー、トピック、パーティション、コンシューマーなどの情報が表示され、メッセージを表示できます。
 
-. ブラウザー タブで *Globex UI* アプリケーションを開きます。 これを行うには、トポロジ ビューで *globex-ui* デプロイメントを表す青い円の横にある image:console-open-url.png[Open URL, 30, 30] アイコンをクリックします。
+. ブラウザー タブで *Globex UI* アプリケーションを開きます。 これを行うには、Topology ビューで *globex-ui* デプロイメントを表す青い円の横にある image:console-open-url.png[Open URL, 30, 30] アイコンをクリックします。
 +
 または、ブラウザーのタブを開いて、 link:https://globex-ui-globex-%USERID%.%SUBDOMAIN%/[globex-ui^, role=external,window=_blank] に移動します。
 +
@@ -164,8 +164,8 @@ Topology ビューに戻ります。
 +
 image::openshift-console-scale-deployment.png[]
 
-. *activity-tracking* ポッドのログを確認し、ポッドが Kafka ブローカー インスタンスに正常に接続していることを確認します。　+
-ログを表示するには、deployment の *Resources* タブをクリックし、 *View logs*  リンクをクリックします。 +
+. *activity-tracking* ポッドのログを確認し、ポッドが Kafka ブローカー インスタンスに正常に接続していることを確認します。
+ログを表示するには、deployment の *Resources* タブをクリックし、 *View logs*  リンクをクリックします。
 +
 image::openshift-console-pod-logs.png[]
 +
@@ -192,7 +192,7 @@ image::kafdrop-kafka-streams-topics.png[]
 
 アクティビティ追跡アプリとレコメンデーション エンジン アプリが起動して実行できるようになったので、アクティビティ イベントの生成と上位の注目製品の計算をテストできます。
 
-ワークショップのデプロイメント　トポロジには、製品のリストにランダムに分散された多数のアクティビティ イベントを生成するアクティビティ シミュレーター サービスが含まれています。 これらのアクティビティ イベントはアクティビティ追跡サービスに送信され、 `globex.tracking` トピック内の Kafka メッセージに変換されます。 これらのメッセージは、トップの注目製品を計算するために レコメンデーション エンジン アプリによって使用されます。
+ワークショップの Deployment トポロジには、製品のリストにランダムに分散された多数のアクティビティ イベントを生成するアクティビティ シミュレーター サービスが含まれています。 これらのアクティビティ イベントはアクティビティ追跡サービスに送信され、 `globex.tracking` トピック内の Kafka メッセージに変換されます。 これらのメッセージは、トップの注目製品を計算するために レコメンデーション エンジン アプリによって使用されます。
 
 . ブラウザウィンドウで、 link:https://console-openshift-console.%SUBDOMAIN%/topology/ns/globex-%USERID%?view=graph[OpenShift Console^,role=external,window=openshiftconsole] からラボの OpenShift クラスターの Topology ビューに移動します。
 . *activity-tracking-simulator* デプロイメントを表す青い円の横にある image:console-open-url.png[30,30] アイコンをクリックして、 *activity-tracking-simulator* アプリケーションへの URL を開きます。
