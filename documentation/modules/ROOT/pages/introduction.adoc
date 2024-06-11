@@ -18,7 +18,6 @@ To further enhance the Globex Retail application, the business comes up with new
 
 The team decides to use the Kafka ecosystem to track the user activity since it can easily scale. Red Hat AMQ Streams (based on the upstream Strimzi) provides a Kubernetes/OpenShift-centric view of Apache Kafka, providing operator-based installation and upgrades, and cloud-native management of brokers, topics and security.
 
-
 == Goals of this lab
 In this module you will follow this journey:
 
