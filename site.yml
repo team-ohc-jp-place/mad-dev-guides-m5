@@ -9,7 +9,7 @@ site:
 content:
   sources:
     - url: .
-      branches: patch-postgres-jp
+      branches: ocp-4.15-jp
       start_path: documentation
 
 asciidoc:
