@@ -26,12 +26,25 @@ Note:  <<appendix.adoc#service-binding, Service Binding の詳細>>
 
 === 環境の探索
 
-. ブラウザウィンドウで、 link:https://console-openshift-console.%SUBDOMAIN%/topology/ns/globex-%USERID%?view=graph[console^,role=external,window=openshiftconsole] からラボ OpenShift クラスターのコンソールに移動します。ユーザー名とパスワード (`%USERID%/openshift`) を使用してログインします。 *globex-%USERID%* namespaceで *Developer* パースペクティブを開きます。
-. Developer パースペクティブで、 *Topology* ビューを開きます。 次のような結果が表示されるはずです (必要に応じてトポロジを並べ替えてください)。
+* link:https://console-openshift-console.%SUBDOMAIN%/topology/ns/globex-%USERID%?view=graph[console^,role=external,window=openshiftconsole] からラボの OpenShift クラスタのコンソールに移動します。
+
+OpenShift クラスタにログインしたことがない場合は次の認証情報を使用してください。OpenShift は既に https://access.redhat.com/products/red-hat-single-sign-on/[Red Hat Single Sign On^] と統合されています。
+
+image::sso_login.png[openshift_login]
+
+
+.  認証情報を使ってログインします:
+
+** ユーザー名: `%USERID%`
+** パスワード: `{openshift-password}`
+
+
+. *globex-%USERID%* 名前空間内で *Developer* パースペクティブを確認し、 *トポロジー* ビューを開きます。
+. 以下のようなものが表示されてい居るはずです。(トポロジーは適当に並べ替えることができます):
 +
 image::globex-deployment-topology.png[]
 +
-展開されたトポロジは次のもので構成されています。
+展開されたトポロジーは次のもので構成されています。
 +
 ** `globex-ui`: Globex Coolstuff Web アプリケーション (Node.js/Angular)
 ** `catalog` と `catalog-database`: Globex Coolstuff カタログ サービス。catalog-database と Spring Boot catalog マイクロサービスで構成される
